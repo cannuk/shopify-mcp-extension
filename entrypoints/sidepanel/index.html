@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopify MCP</title>
+  <link rel="stylesheet" href="./style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand-row">
+        <div class="brand">
+          <h1>Shopify MCP</h1>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Loading / Not Shopify states -->
+      <div id="view-loading" class="state-view">
+        <div class="loader-pulse"></div>
+        <p>Detecting Shopify store...</p>
+      </div>
+
+      <div id="view-empty" class="state-view hidden">
+        <h2>Not a Shopify Store</h2>
+        <p>Navigate to a Shopify-powered store to use MCP.</p>
+      </div>
+
+      <!-- MCP Connected View -->
+      <div id="view-mcp" class="hidden">
+        <!-- Status -->
+        <section class="section">
+          <label class="eyebrow">MCP SERVER STATUS</label>
+          <div class="mcp-status-card">
+            <div class="mcp-status-row">
+              <span class="mcp-dot mcp-dot-pending" id="mcp-dot"></span>
+              <span id="mcp-status-text">Checking...</span>
+            </div>
+            <div id="mcp-server-info" class="mcp-server-info hidden"></div>
+          </div>
+          <div id="mcp-tools-list" class="mcp-tools-list hidden">
+            <label class="eyebrow" style="margin-top:16px;">AVAILABLE TOOLS</label>
+            <div id="mcp-tools-cloud" class="cloud-wrap"></div>
+          </div>
+        </section>
+
+        <!-- Search -->
+        <section class="section" id="mcp-search-section" style="display:none;">
+          <label class="eyebrow">SEARCH CATALOG</label>
+          <div class="mcp-input-group">
+            <input type="text" id="mcp-search-query" class="mcp-input" placeholder="e.g. boots, gift under $50...">
+            <button id="mcp-search-btn" class="action-link">Search</button>
+          </div>
+          <div id="mcp-search-results" class="mcp-results"></div>
+        </section>
+
+        <!-- Policies -->
+        <section class="section" id="mcp-policy-section" style="display:none;">
+          <label class="eyebrow">STORE POLICIES & FAQ</label>
+          <div class="mcp-input-group">
+            <input type="text" id="mcp-policy-query" class="mcp-input" placeholder="e.g. return policy, shipping...">
+            <button id="mcp-policy-btn" class="action-link">Ask</button>
+          </div>
+          <div id="mcp-policy-results" class="mcp-results"></div>
+        </section>
+
+        <!-- Cart -->
+        <section class="section" id="mcp-cart-section" style="display:none;">
+          <label class="eyebrow">CART</label>
+          <div id="mcp-cart-content" class="mcp-cart-content">
+            <p class="mcp-hint">Add items from search results to test the cart flow.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
