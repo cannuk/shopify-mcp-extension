@@ -140,7 +140,7 @@ export async function mcpInitialize(
   return mcpCall(state, "initialize", {
     protocolVersion: "2024-11-05",
     capabilities: {},
-    clientInfo: { name: "shopify-mcp", version: "1.0" },
+    clientInfo: { name: "shopify-mcp-extension", version: "1.0" },
   }) as Promise<McpInitResult>;
 }
 

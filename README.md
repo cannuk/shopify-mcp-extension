@@ -1,63 +1,63 @@
-# Shopify MCP
+# Shopify MCP Extension
 
-A Chrome extension that connects to Shopify storefronts via the Model Context Protocol (MCP). It adds a side panel for searching products, viewing product details, and managing your cart — all synced with the store's native cart.
+A Chrome extension that adds an AI-powered shopping assistant to any Shopify store. It opens as a side panel in your browser and lets you search products, view details, manage your cart, and look up store policies — all without leaving the page you're on.
 
-## How It Works
+## What It Does
 
-The extension communicates with a Shopify store's MCP server at `{store-origin}/api/mcp` using the JSON-RPC protocol. When you visit a Shopify-powered storefront and open the side panel, it automatically detects the store and connects.
+When you visit a Shopify store and open the extension, it connects to the store's MCP (Model Context Protocol) server and gives you a panel with these features:
 
-Cart synchronization works by reading the store's `cart` cookie to link the browser cart with the MCP cart. When items are modified through the extension, the cookie is updated and the browser's cart UI is refreshed.
+**Search products** — Find items across the store's catalog. Results show product images, names, prices, and categories.
 
-## What It Can Do
+**View product details** — Expand any search result to see the full description, all available sizes and options, an image gallery, pricing, stock availability, and a direct link to the product page.
 
-### Search Products
+**Manage your cart** — Add items from search results, adjust quantities, remove items, and check out. Everything happens in the side panel so you don't lose your place on the site.
 
-Type a query in the **Search** field to find products. Results show images, titles, prices, and product types.
+**Cart stays in sync** — The extension shares the same cart as the store website. Add something in the side panel and it shows up on the site. Add something on the site and it shows up in the side panel after a page refresh.
 
-### Product Details
+**Look up store policies** — Search shipping, returns, FAQs, and other store policies without hunting through footer links.
 
-Click **Details** on any search result to expand the full product info — description, image gallery, available sizes/options, pricing, variant availability, and a link to the product page on the store.
+## Installation
 
-### Cart Management
+### Option 1: Download a release
 
-- **Add to Cart** from search results
-- Adjust quantities or remove items from the cart panel
-- Checkout link takes you directly to the store's checkout
+1. Download the latest `.zip` from the [Releases](https://github.com/cannuk/shopify-mcp-extension/releases) page
+2. Unzip it to a folder on your computer
 
-### Cart Sync
+### Option 2: Build from source
 
-The side panel cart and the browser's native store cart stay in sync:
-
-- Items added via the extension update the browser cart automatically
-- Items added on the store website sync to the extension when the page reloads
-
-### Store Policies
-
-Search the store's FAQs and policies (shipping, returns, etc.) from the **Policies** section.
-
-## Loading the Extension (Unpacked)
-
-1. Download or clone this repository
-2. Install dependencies and build:
-
-   ```bash
+1. Make sure you have [Node.js](https://nodejs.org/) (v18 or newer) installed
+2. Download this repository (click the green **Code** button above, then **Download ZIP**) and unzip it, or clone it with git
+3. Open a terminal in the project folder and run:
+   ```
    npm install
    npm run build
    ```
+4. The built extension will be in the `.output/chrome-mv3/` folder
 
-3. Open Chrome and navigate to `chrome://extensions`
-4. Enable **Developer mode** (toggle in the top-right corner)
-5. Click **Load unpacked**
-6. Select the `.output/chrome-mv3/` directory from this project
-7. Navigate to any Shopify storefront and click the extension icon to open the side panel
+### Load into Chrome
 
-## Development
+1. Open Chrome and go to `chrome://extensions`
+2. Turn on **Developer mode** using the toggle in the top-right corner
+3. Click **Load unpacked**
+4. Select the extension folder (the unzipped release, or `.output/chrome-mv3/` if you built from source)
+5. You should see **Shopify MCP Extension** appear in your extensions list
 
-### Prerequisites
+### Using the Extension
 
-- Node.js (v18+)
-- npm
-- Google Chrome
+1. Go to any Shopify-powered store (e.g. [allbirds.com](https://www.allbirds.com))
+2. Click the **Shopify MCP Extension** icon in the Chrome toolbar
+3. A side panel will open showing the connection status and available features
+4. Start searching, browsing, and adding to your cart
+
+## Requirements
+
+- Google Chrome (desktop)
+- The Shopify store must have an MCP server enabled at `/api/mcp`
+
+## For Developers
+
+<details>
+<summary>Development setup and architecture</summary>
 
 ### Commands
 
@@ -67,14 +67,30 @@ Search the store's FAQs and policies (shipping, returns, etc.) from the **Polici
 | `npm run build` | Production build |
 | `npm run zip` | Build and package as `.zip` for distribution |
 
-When using `npm run dev`, WXT automatically reloads the extension on code changes. You may still need to close and reopen the side panel to see UI updates.
+When using `npm run dev`, the extension reloads automatically on code changes. You may need to close and reopen the side panel to see UI updates.
 
-### MCP Tools
+### Architecture
 
-The extension uses these MCP tools provided by the store's server:
+The extension is built with [WXT](https://wxt.dev/) (a framework for building browser extensions) and TypeScript. It has three main pieces:
 
-- `search_shop_catalog` — Search products
-- `get_product_details` — Full product information
-- `update_cart` — Add/remove/update cart items
-- `get_cart` — Retrieve current cart state
-- `search_shop_policies_and_faqs` — Query store policies
+- **Background script** — Listens for the extension icon click and opens the side panel
+- **Side panel UI** — The search, cart, and policy interface that users interact with
+- **MCP client** — Handles communication with the store's MCP server using JSON-RPC
+
+### MCP Tools Used
+
+The extension calls these tools on the store's MCP server:
+
+| Tool | Purpose |
+|------|---------|
+| `search_shop_catalog` | Search products |
+| `get_product_details` | Full product info |
+| `update_cart` | Add/remove/update cart items |
+| `get_cart` | Retrieve current cart |
+| `search_shop_policies_and_faqs` | Query store policies |
+
+### Cart Sync
+
+Cart synchronization works by reading the browser's `cart` cookie to identify the active Shopify cart. The extension uses this token to operate on the same cart via the MCP server. After any cart change, the cookie is updated and the store's page is signaled to refresh its cart UI.
+
+</details>

@@ -2,7 +2,7 @@ import { defineConfig } from "wxt";
 
 export default defineConfig({
   manifest: {
-    name: "Shopify MCP",
+    name: "Shopify MCP Extension",
     description: "MCP client for Shopify storefronts",
     action: {},
     permissions: ["activeTab", "scripting", "sidePanel", "tabs"],
