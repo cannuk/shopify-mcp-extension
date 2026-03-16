@@ -31,6 +31,6 @@ jobs:
         run: |
           TAG="v${{ steps.version.outputs.version }}-${GITHUB_SHA::7}"
           gh release create "$TAG" \
-            --title "Shopify MCP Extension $TAG" \
+            --title "Shopify MCP Explorer $TAG" \
             --generate-notes \
             .output/*.zip

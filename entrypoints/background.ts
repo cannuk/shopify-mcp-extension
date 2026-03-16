@@ -6,5 +6,5 @@ export default defineBackground(() => {
     }
   });
 
-  console.log("Shopify MCP extension loaded.");
+  console.log("Shopify MCP Explorer loaded.");
 });

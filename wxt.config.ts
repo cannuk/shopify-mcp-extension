@@ -2,7 +2,7 @@ import { defineConfig } from "wxt";
 
 export default defineConfig({
   manifest: {
-    name: "Shopify MCP Extension",
+    name: "Shopify MCP Explorer",
     description: "MCP client for Shopify storefronts",
     icons: {
       16: "icon-16.png",

@@ -1,4 +1,4 @@
-# Shopify MCP Extension
+# Shopify MCP Explorer
 
 A Chrome extension that connects to any Shopify store's MCP (Model Context Protocol) server. It opens as a side panel in your browser and lets you search products, view detailed product info, manage your cart, look up store policies, and inspect every MCP call — all without leaving the page you're on.
 
@@ -44,12 +44,12 @@ The extension uses the MCP protocol to discover available tools, their descripti
 2. Turn on **Developer mode** using the toggle in the top-right corner
 3. Click **Load unpacked**
 4. Select the extension folder (the unzipped release, or `.output/chrome-mv3/` if you built from source)
-5. You should see **Shopify MCP Extension** appear in your extensions list
+5. You should see **Shopify MCP Explorer** appear in your extensions list
 
 ### Using the Extension
 
 1. Go to any Shopify-powered store (e.g. [allbirds.com](https://www.allbirds.com))
-2. Click the **Shopify MCP Extension** icon in the Chrome toolbar
+2. Click the **Shopify MCP Explorer** icon in the Chrome toolbar
 3. A side panel will open showing the connection status and available tools
 4. Start searching, browsing, and adding to your cart
 5. Switch to the **Debug** tab at any time to inspect MCP calls
