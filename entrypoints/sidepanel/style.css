@@ -88,6 +88,15 @@ header {
   color: var(--text-muted);
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tab-btn .mcp-dot {
+  width: 7px;
+  height: 7px;
 }
 
 .tab-btn:hover {
@@ -132,6 +141,38 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.cloud-wrap > .eyebrow {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.ucp-detail-row {
+  font-size: 12px;
+  padding: 3px 0;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.ucp-detail-row a {
+  color: var(--shopify-green);
+  word-break: break-all;
+}
+
+.ucp-detail-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.ucp-detail-config {
+  margin-top: 4px;
+  padding-left: 4px;
 }
 
 .tool-pill-wrapper {
@@ -230,6 +271,15 @@ main {
   color: var(--text-muted);
   font-size: 10px;
   font-family: monospace;
+}
+
+.debug-endpoint {
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--text-muted);
+  background: var(--bg-app);
+  padding: 1px 6px;
+  border-radius: 10px;
 }
 
 .debug-method {

@@ -15,17 +15,45 @@ import { mcpLog, type McpLogEntry } from "../../lib/mcp-log";
 import { createJsonTree } from "../../lib/json-tree";
 
 const mcpState: McpState = createMcpState();
+let currentOrigin: string | null = null;
 
 // DOM helpers
 function $(id: string): HTMLElement | null {
   return document.getElementById(id);
 }
 
+function setDot(tabId: string, className: string) {
+  const tab = $(tabId);
+  const content = $(`${tabId}-content`);
+  if (tab) tab.className = className;
+  if (content) content.className = className;
+}
+
 function showView(name: "loading" | "empty" | "mcp") {
-  const views = ["view-loading", "view-empty", "view-mcp"];
-  views.forEach((v) => {
-    const el = $(v);
-    if (el) el.classList.toggle("hidden", v !== `view-${name}`);
+  const loading = $("view-loading")!;
+  const empty = $("view-empty")!;
+  const tabs = document.querySelectorAll<HTMLElement>(".tab-content");
+  const tabBar = document.querySelector<HTMLElement>(".tab-bar")!;
+
+  loading.classList.toggle("hidden", name !== "loading");
+  empty.classList.toggle("hidden", name !== "empty");
+
+  if (name === "mcp") {
+    // Show the tab bar and activate the current tab
+    tabBar.style.display = "";
+    showActiveTab();
+  } else {
+    // Hide tab bar and all tab content
+    tabBar.style.display = "none";
+    tabs.forEach((t) => t.classList.add("hidden"));
+  }
+}
+
+function showActiveTab() {
+  const activeBtn = document.querySelector<HTMLButtonElement>(".tab-btn.tab-active");
+  const tabName = activeBtn?.dataset.tab || "storefront";
+  document.querySelectorAll<HTMLElement>(".tab-content").forEach((t) => {
+    t.classList.toggle("hidden", t.id !== `tab-${tabName}`);
   });
 }
 
@@ -57,7 +85,7 @@ function setupSearch() {
     try {
       const res = await mcpToolCall(mcpState, "search_shop_catalog", {
         query,
-        context: "User browsing via Shopify MCP extension",
+        context: "User browsing via Shopify MCP Explorer",
       });
       const text = res.content?.[0]?.text;
       const data = text ? JSON.parse(text) : {};
@@ -419,6 +447,56 @@ function renderCart() {
   }
 }
 
+// ─── Tool Pills ──────────────────────────────────
+function renderToolPills(
+  container: HTMLElement,
+  tools: import("../../lib/mcp-client").McpTool[]
+) {
+  container.replaceChildren();
+  tools.forEach((t) => {
+    const pill = document.createElement("span");
+    pill.className = "tool-pill";
+    pill.textContent = t.name;
+
+    const detail = document.createElement("div");
+    detail.className = "tool-detail hidden";
+
+    const parts: string[] = [];
+    if (t.description) {
+      parts.push(`<div class="tool-detail-desc">${sanitize(t.description)}</div>`);
+    }
+    const props = t.inputSchema?.properties;
+    if (props) {
+      const required = t.inputSchema?.required || [];
+      const rows = Object.entries(props)
+        .map(([name, p]) => {
+          const req = required.includes(name) ? " <em>(required)</em>" : "";
+          const desc = p.description ? ` — ${sanitize(p.description)}` : "";
+          return `<li><code>${sanitize(name)}</code> <span class="tool-param-type">${sanitize(p.type || "")}</span>${req}${desc}</li>`;
+        })
+        .join("");
+      parts.push(`<div class="tool-detail-params"><strong>Parameters:</strong><ul>${rows}</ul></div>`);
+    }
+    detail.innerHTML = parts.join("") || "<div>No additional details.</div>";
+
+    pill.addEventListener("click", () => {
+      container.querySelectorAll(".tool-detail").forEach((d) => {
+        if (d !== detail) d.classList.add("hidden");
+      });
+      container.querySelectorAll(".tool-pill").forEach((p) => {
+        if (p !== pill) p.classList.remove("tool-pill-active");
+      });
+      detail.classList.toggle("hidden");
+      pill.classList.toggle("tool-pill-active");
+    });
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "tool-pill-wrapper";
+    wrapper.append(pill, detail);
+    container.appendChild(wrapper);
+  });
+}
+
 // ─── Init MCP ─────────────────────────────────────
 async function loadBrowserCart(tabId: number) {
   const browserCartGid = await fetchBrowserCartToken(tabId);
@@ -452,7 +530,6 @@ async function initMcp(origin: string, tabId: number) {
   mcpState.endpoint = `${origin}/api/mcp`;
   mcpState.tabId = tabId;
 
-  const dot = $("mcp-dot")!;
   const statusText = $("mcp-status-text")!;
   const serverInfo = $("mcp-server-info")!;
   const toolsCloud = $("mcp-tools-cloud")!;
@@ -461,7 +538,7 @@ async function initMcp(origin: string, tabId: number) {
   try {
     const initResult = await mcpInitialize(mcpState);
 
-    dot.className = "mcp-dot mcp-dot-ok";
+    setDot("mcp-dot", "mcp-dot mcp-dot-ok");
     statusText.textContent = "Connected";
     mcpState.connected = true;
 
@@ -473,50 +550,7 @@ async function initMcp(origin: string, tabId: number) {
     const tools = toolsResult.tools || [];
     if (tools.length) {
       toolsList.classList.remove("hidden");
-      toolsCloud.replaceChildren();
-      tools.forEach((t) => {
-        const pill = document.createElement("span");
-        pill.className = "tool-pill";
-        pill.textContent = t.name;
-
-        const detail = document.createElement("div");
-        detail.className = "tool-detail hidden";
-
-        const parts: string[] = [];
-        if (t.description) {
-          parts.push(`<div class="tool-detail-desc">${sanitize(t.description)}</div>`);
-        }
-        const props = t.inputSchema?.properties;
-        if (props) {
-          const required = t.inputSchema?.required || [];
-          const rows = Object.entries(props)
-            .map(([name, p]) => {
-              const req = required.includes(name) ? " <em>(required)</em>" : "";
-              const desc = p.description ? ` — ${sanitize(p.description)}` : "";
-              return `<li><code>${sanitize(name)}</code> <span class="tool-param-type">${sanitize(p.type || "")}</span>${req}${desc}</li>`;
-            })
-            .join("");
-          parts.push(`<div class="tool-detail-params"><strong>Parameters:</strong><ul>${rows}</ul></div>`);
-        }
-        detail.innerHTML = parts.join("") || "<div>No additional details.</div>";
-
-        pill.addEventListener("click", () => {
-          // Close other open details
-          toolsCloud.querySelectorAll(".tool-detail").forEach((d) => {
-            if (d !== detail) d.classList.add("hidden");
-          });
-          toolsCloud.querySelectorAll(".tool-pill").forEach((p) => {
-            if (p !== pill) p.classList.remove("tool-pill-active");
-          });
-          detail.classList.toggle("hidden");
-          pill.classList.toggle("tool-pill-active");
-        });
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "tool-pill-wrapper";
-        wrapper.append(pill, detail);
-        toolsCloud.appendChild(wrapper);
-      });
+      renderToolPills(toolsCloud, tools);
     }
 
     // Show interactive sections
@@ -526,34 +560,305 @@ async function initMcp(origin: string, tabId: number) {
 
     await loadBrowserCart(tabId);
 
-    setupSearch();
-    setupPolicy();
-
-    // Reload cart data when the page navigates or refreshes
-    chrome.tabs.onUpdated.addListener((updatedTabId, changeInfo) => {
-      if (updatedTabId === tabId && changeInfo.status === "complete") {
-        loadBrowserCart(tabId);
-      }
-    });
+    // Probe for Checkout UCP server (fire-and-forget, no auth required for discovery)
+    discoverUcp(origin);
   } catch {
-    dot.className = "mcp-dot mcp-dot-err";
+    setDot("mcp-dot", "mcp-dot mcp-dot-err");
     statusText.textContent = "Not available";
+  }
+}
+
+// ─── UCP Discovery ───────────────────────────────
+interface UcpTransportBinding {
+  transport: string;
+  version?: string;
+  endpoint?: string;
+  spec?: string;
+  schema?: string;
+}
+
+interface UcpService {
+  name: string;
+  bindings: UcpTransportBinding[];
+}
+
+interface UcpCapability {
+  name: string;
+  version?: string;
+  spec?: string;
+  schema?: string;
+  extends?: string;
+  config?: Record<string, unknown>;
+}
+
+interface UcpPaymentHandler {
+  name: string;
+  id?: string;
+  version?: string;
+  spec?: string;
+  config?: Record<string, unknown>;
+}
+
+interface UcpDiscovery {
+  version?: string;
+  services: UcpService[];
+  capabilities: UcpCapability[];
+  paymentHandlers: UcpPaymentHandler[];
+}
+
+async function fetchUcpDiscovery(origin: string): Promise<UcpDiscovery | null> {
+  const endpoint = `${origin}/.well-known/ucp`;
+  const start = Date.now();
+  try {
+    const res = await fetch(endpoint, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      mcpLog.addEntry({ timestamp: new Date(), endpoint, method: "GET", params: {}, response: { status: res.status, statusText: res.statusText }, error: `HTTP ${res.status}`, durationMs: Date.now() - start });
+      return null;
+    }
+    const data = await res.json();
+    mcpLog.addEntry({ timestamp: new Date(), endpoint, method: "GET", params: {}, response: data, error: null, durationMs: Date.now() - start });
+
+    const ucp = data?.ucp;
+    if (!ucp) return null;
+
+    // Parse services
+    const services: UcpService[] = [];
+    if (ucp.services && typeof ucp.services === "object") {
+      for (const [name, bindings] of Object.entries(ucp.services)) {
+        const arr = Array.isArray(bindings) ? bindings : [bindings];
+        services.push({
+          name,
+          bindings: arr.map((b: Record<string, unknown>) => ({
+            transport: (b.transport as string) || "unknown",
+            version: b.version as string | undefined,
+            endpoint: b.endpoint as string | undefined,
+            spec: b.spec as string | undefined,
+            schema: b.schema as string | undefined,
+          })),
+        });
+      }
+    }
+
+    // Parse capabilities
+    const capabilities: UcpCapability[] = [];
+    if (ucp.capabilities && typeof ucp.capabilities === "object") {
+      for (const [name, caps] of Object.entries(ucp.capabilities)) {
+        const arr = Array.isArray(caps) ? caps : [caps];
+        for (const c of arr) {
+          const cap = c as Record<string, unknown>;
+          capabilities.push({
+            name,
+            version: cap.version as string | undefined,
+            spec: cap.spec as string | undefined,
+            schema: cap.schema as string | undefined,
+            extends: cap.extends as string | undefined,
+            config: cap.config as Record<string, unknown> | undefined,
+          });
+        }
+      }
+    }
+
+    // Parse payment handlers
+    const paymentHandlers: UcpPaymentHandler[] = [];
+    if (ucp.payment_handlers && typeof ucp.payment_handlers === "object") {
+      for (const [name, handlers] of Object.entries(ucp.payment_handlers)) {
+        const arr = Array.isArray(handlers) ? handlers : [handlers];
+        for (const h of arr) {
+          const handler = h as Record<string, unknown>;
+          paymentHandlers.push({
+            name,
+            id: handler.id as string | undefined,
+            version: handler.version as string | undefined,
+            spec: handler.spec as string | undefined,
+            config: handler.config as Record<string, unknown> | undefined,
+          });
+        }
+      }
+    }
+
+    return { version: ucp.version, services, capabilities, paymentHandlers };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    mcpLog.addEntry({ timestamp: new Date(), endpoint, method: "GET", params: {}, response: null, error: msg, durationMs: Date.now() - start });
+    return null;
+  }
+}
+
+function shortName(fullName: string): string {
+  return fullName
+    .replace(/^dev\.ucp\./, "")
+    .replace(/^com\./, "")
+    .replace(/^dev\.shopify\./, "shopify.")
+    || fullName;
+}
+
+async function discoverUcp(origin: string) {
+  const ucpStatusText = $("ucp-status-text")!;
+  const ucpList = $("ucp-tools-list")!;
+  const ucpCloud = $("ucp-tools-cloud")!;
+  const ucpInfo = $("ucp-server-info")!;
+
+  const discovery = await fetchUcpDiscovery(origin);
+  if (!discovery) {
+    setDot("ucp-dot", "mcp-dot mcp-dot-err");
+    ucpStatusText.textContent = "Not available";
+    return;
+  }
+
+  setDot("ucp-dot", "mcp-dot mcp-dot-ok");
+  ucpStatusText.textContent = "Available";
+
+  // Version info
+  ucpInfo.classList.remove("hidden");
+  ucpInfo.innerHTML = `<span>UCP Protocol: <strong>${sanitize(discovery.version || "-")}</strong></span>`;
+
+  ucpList.classList.remove("hidden");
+  ucpCloud.replaceChildren();
+
+  // ── Services ──
+  if (discovery.services.length) {
+    const servicesLabel = document.createElement("label");
+    servicesLabel.className = "eyebrow";
+    servicesLabel.style.marginTop = "12px";
+    servicesLabel.textContent = "SERVICES";
+    ucpCloud.appendChild(servicesLabel);
+
+    for (const svc of discovery.services) {
+      for (const binding of svc.bindings) {
+        const pill = document.createElement("span");
+        pill.className = "tool-pill";
+        pill.textContent = `${shortName(svc.name)} (${binding.transport})`;
+
+        const detail = document.createElement("div");
+        detail.className = "tool-detail hidden";
+        const rows: string[] = [];
+        rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Service</span> ${sanitize(svc.name)}</div>`);
+        rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Transport</span> ${sanitize(binding.transport)}</div>`);
+        if (binding.version) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Version</span> ${sanitize(binding.version)}</div>`);
+        if (binding.endpoint) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Endpoint</span> <code>${sanitize(binding.endpoint)}</code></div>`);
+        if (binding.spec) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Spec</span> <a href="${sanitize(binding.spec)}" target="_blank">${sanitize(binding.spec)}</a></div>`);
+        if (binding.schema) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Schema</span> <a href="${sanitize(binding.schema)}" target="_blank">${sanitize(binding.schema)}</a></div>`);
+        detail.innerHTML = rows.join("");
+
+        pill.addEventListener("click", () => {
+          ucpCloud.querySelectorAll(".tool-detail").forEach((d) => { if (d !== detail) d.classList.add("hidden"); });
+          ucpCloud.querySelectorAll(".tool-pill").forEach((p) => { if (p !== pill) p.classList.remove("tool-pill-active"); });
+          detail.classList.toggle("hidden");
+          pill.classList.toggle("tool-pill-active");
+        });
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "tool-pill-wrapper";
+        wrapper.append(pill, detail);
+        ucpCloud.appendChild(wrapper);
+      }
+    }
+  }
+
+  // ── Capabilities ──
+  if (discovery.capabilities.length) {
+    const capLabel = document.createElement("label");
+    capLabel.className = "eyebrow";
+    capLabel.style.marginTop = "16px";
+    capLabel.textContent = "CAPABILITIES";
+    ucpCloud.appendChild(capLabel);
+
+    for (const cap of discovery.capabilities) {
+      const pill = document.createElement("span");
+      pill.className = "tool-pill";
+      pill.textContent = shortName(cap.name);
+
+      const detail = document.createElement("div");
+      detail.className = "tool-detail hidden";
+      const rows: string[] = [];
+      rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Capability</span> ${sanitize(cap.name)}</div>`);
+      if (cap.version) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Version</span> ${sanitize(cap.version)}</div>`);
+      if (cap.extends) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Extends</span> ${sanitize(cap.extends)}</div>`);
+      if (cap.spec) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Spec</span> <a href="${sanitize(cap.spec)}" target="_blank">${sanitize(cap.spec)}</a></div>`);
+      if (cap.schema) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Schema</span> <a href="${sanitize(cap.schema)}" target="_blank">${sanitize(cap.schema)}</a></div>`);
+      if (cap.config) {
+        rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Config</span></div>`);
+        const tree = document.createElement("div");
+        tree.className = "ucp-detail-config";
+        tree.appendChild(createJsonTree(cap.config));
+        // We'll append this after setting innerHTML
+        detail.innerHTML = rows.join("");
+        detail.appendChild(tree);
+      } else {
+        detail.innerHTML = rows.join("");
+      }
+
+      pill.addEventListener("click", () => {
+        ucpCloud.querySelectorAll(".tool-detail").forEach((d) => { if (d !== detail) d.classList.add("hidden"); });
+        ucpCloud.querySelectorAll(".tool-pill").forEach((p) => { if (p !== pill) p.classList.remove("tool-pill-active"); });
+        detail.classList.toggle("hidden");
+        pill.classList.toggle("tool-pill-active");
+      });
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "tool-pill-wrapper";
+      wrapper.append(pill, detail);
+      ucpCloud.appendChild(wrapper);
+    }
+  }
+
+  // ── Payment Handlers ──
+  if (discovery.paymentHandlers.length) {
+    const payLabel = document.createElement("label");
+    payLabel.className = "eyebrow";
+    payLabel.style.marginTop = "16px";
+    payLabel.textContent = "PAYMENT HANDLERS";
+    ucpCloud.appendChild(payLabel);
+
+    for (const handler of discovery.paymentHandlers) {
+      const pill = document.createElement("span");
+      pill.className = "tool-pill";
+      pill.textContent = shortName(handler.name);
+
+      const detail = document.createElement("div");
+      detail.className = "tool-detail hidden";
+      const rows: string[] = [];
+      rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Handler</span> ${sanitize(handler.name)}</div>`);
+      if (handler.id) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">ID</span> ${sanitize(handler.id)}</div>`);
+      if (handler.version) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Version</span> ${sanitize(handler.version)}</div>`);
+      if (handler.spec) rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Spec</span> <a href="${sanitize(handler.spec)}" target="_blank">${sanitize(handler.spec)}</a></div>`);
+      if (handler.config) {
+        rows.push(`<div class="ucp-detail-row"><span class="ucp-detail-label">Config</span></div>`);
+        const tree = document.createElement("div");
+        tree.className = "ucp-detail-config";
+        tree.appendChild(createJsonTree(handler.config));
+        detail.innerHTML = rows.join("");
+        detail.appendChild(tree);
+      } else {
+        detail.innerHTML = rows.join("");
+      }
+
+      pill.addEventListener("click", () => {
+        ucpCloud.querySelectorAll(".tool-detail").forEach((d) => { if (d !== detail) d.classList.add("hidden"); });
+        ucpCloud.querySelectorAll(".tool-pill").forEach((p) => { if (p !== pill) p.classList.remove("tool-pill-active"); });
+        detail.classList.toggle("hidden");
+        pill.classList.toggle("tool-pill-active");
+      });
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "tool-pill-wrapper";
+      wrapper.append(pill, detail);
+      ucpCloud.appendChild(wrapper);
+    }
   }
 }
 
 // ─── Tabs ─────────────────────────────────────────
 function setupTabs() {
   const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
-  const tabExtension = $("tab-extension")!;
-  const tabDebug = $("tab-debug")!;
 
   tabBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       tabBtns.forEach((b) => b.classList.remove("tab-active"));
       btn.classList.add("tab-active");
-      const tab = btn.dataset.tab;
-      tabExtension.classList.toggle("hidden", tab !== "extension");
-      tabDebug.classList.toggle("hidden", tab !== "debug");
+      showActiveTab();
     });
   });
 }
@@ -581,7 +886,9 @@ function setupDebugLog() {
 
     const header = document.createElement("div");
     header.className = "debug-entry-header";
-    header.innerHTML = `<span class="debug-timestamp">${time}</span><span class="debug-method">${sanitize(entry.method)}</span><span class="debug-duration">${entry.durationMs}ms</span>`;
+    // Show just the path portion of the endpoint (e.g. /api/mcp or /api/ucp/mcp)
+    const endpointPath = (() => { try { return new URL(entry.endpoint).pathname; } catch { return entry.endpoint; } })();
+    header.innerHTML = `<span class="debug-timestamp">${time}</span><span class="debug-endpoint">${sanitize(endpointPath)}</span><span class="debug-method">${sanitize(entry.method)}</span><span class="debug-duration">${entry.durationMs}ms</span>`;
     if (entry.error) {
       header.innerHTML += `<span class="debug-error-badge">error</span>`;
     }
@@ -621,10 +928,90 @@ function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+// ─── Navigation ──────────────────────────────────
+function disconnectMcp() {
+  mcpState.endpoint = null;
+  mcpState.connected = false;
+  mcpState.cartId = null;
+  mcpState.cartData = null;
+  currentOrigin = null;
+
+  // Clear debug log
+  mcpLog.clear();
+  const log = $("debug-log");
+  if (log) log.innerHTML = '<p class="mcp-hint">MCP calls will appear here as they are made.</p>';
+}
+
+function resetMcpUI() {
+  // Hide interactive sections
+  $("mcp-search-section")!.style.display = "none";
+  $("mcp-policy-section")!.style.display = "none";
+  $("mcp-cart-section")!.style.display = "none";
+
+  // Clear dynamic content
+  $("mcp-search-results")!.innerHTML = "";
+  ($("mcp-search-query") as HTMLInputElement).value = "";
+  $("mcp-policy-results")!.innerHTML = "";
+  ($("mcp-policy-query") as HTMLInputElement).value = "";
+  $("mcp-cart-content")!.innerHTML =
+    '<p class="mcp-hint">Add items from search results to test the cart flow.</p>';
+  $("mcp-tools-cloud")!.replaceChildren();
+  $("mcp-tools-list")!.classList.add("hidden");
+  $("mcp-server-info")!.classList.add("hidden");
+
+  // Clear UCP section
+  setDot("ucp-dot", "mcp-dot mcp-dot-pending");
+  $("ucp-status-text")!.textContent = "Checking...";
+  $("ucp-tools-cloud")!.replaceChildren();
+  $("ucp-tools-list")!.classList.add("hidden");
+  $("ucp-server-info")!.classList.add("hidden");
+
+  // Reset status indicator
+  setDot("mcp-dot", "mcp-dot mcp-dot-pending");
+  $("mcp-status-text")!.textContent = "Checking...";
+}
+
+async function handleNavigation(tabId: number, url: string) {
+  if (
+    url.startsWith("chrome://") ||
+    url.includes("google.com/webstore")
+  ) {
+    disconnectMcp();
+    showView("empty");
+    return;
+  }
+
+  const newOrigin = new URL(url).origin;
+
+  // Same store — just refresh cart, keep everything else intact
+  if (newOrigin === currentOrigin && mcpState.connected) {
+    await loadBrowserCart(tabId);
+    return;
+  }
+
+  // Different page — check if it's a Shopify store
+  showView("loading");
+  const isShopify = await detectShopify(tabId);
+  if (!isShopify) {
+    disconnectMcp();
+    showView("empty");
+    return;
+  }
+
+  // New Shopify store — full reinitialize
+  disconnectMcp();
+  resetMcpUI();
+  currentOrigin = newOrigin;
+  showView("mcp");
+  await initMcp(newOrigin, tabId);
+}
+
 // ─── Main ─────────────────────────────────────────
 async function main() {
   setupTabs();
   setupDebugLog();
+  setupSearch();
+  setupPolicy();
   showView("loading");
 
   try {
@@ -642,15 +1029,55 @@ async function main() {
       return;
     }
 
+    mcpState.tabId = tab.id;
+
     const isShopify = await detectShopify(tab.id);
     if (!isShopify) {
       showView("empty");
-      return;
+    } else {
+      currentOrigin = new URL(tab.url).origin;
+      showView("mcp");
+      await initMcp(currentOrigin, tab.id);
     }
 
-    showView("mcp");
-    const origin = new URL(tab.url).origin;
-    await initMcp(origin, tab.id);
+    // Listen for navigations within the current tab
+    chrome.tabs.onUpdated.addListener((updatedTabId, changeInfo, updatedTab) => {
+      if (updatedTabId !== mcpState.tabId) return;
+
+      // Show loading immediately when URL changes to a different origin
+      if (changeInfo.url) {
+        const newOrigin = new URL(changeInfo.url).origin;
+        if (newOrigin !== currentOrigin) {
+          showView("loading");
+        }
+      }
+
+      // Run full detection once the page has loaded
+      if (changeInfo.status === "complete" && updatedTab.url) {
+        handleNavigation(updatedTabId, updatedTab.url);
+      }
+    });
+
+    // Listen for tab switches — the side panel persists across tabs
+    chrome.tabs.onActivated.addListener(async (activeInfo) => {
+      mcpState.tabId = activeInfo.tabId;
+      showView("loading");
+      try {
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        if (!tab.url || tab.url.startsWith("chrome://") || tab.url.includes("google.com/webstore")) {
+          disconnectMcp();
+          showView("empty");
+          return;
+        }
+        // If page is still loading, onUpdated will handle it
+        if (tab.status === "complete") {
+          await handleNavigation(activeInfo.tabId, tab.url);
+        }
+      } catch {
+        disconnectMcp();
+        showView("empty");
+      }
+    });
   } catch {
     showView("empty");
   }
