@@ -1,3 +1,5 @@
+import { mcpLog } from "./mcp-log";
+
 export interface McpState {
   endpoint: string | null;
   connected: boolean;
@@ -20,6 +22,11 @@ export interface McpInitResult {
 export interface McpTool {
   name: string;
   description?: string;
+  inputSchema?: {
+    type?: string;
+    properties?: Record<string, { type?: string; description?: string }>;
+    required?: string[];
+  };
 }
 
 export interface McpToolsResult {
@@ -89,22 +96,38 @@ export async function mcpCall(
 ): Promise<unknown> {
   if (!state.endpoint) throw new Error("MCP endpoint not set");
   state.reqId++;
-  const res = await fetch(state.endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: state.reqId,
-      method,
-      params,
-    }),
-  });
-  const json = await res.json();
-  if (json.error) throw new Error(json.error.message || "MCP error");
-  return json.result;
+  const start = Date.now();
+  let logged = false;
+  try {
+    const res = await fetch(state.endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: state.reqId,
+        method,
+        params,
+      }),
+    });
+    const json = await res.json();
+    if (json.error) {
+      mcpLog.addEntry({ timestamp: new Date(), method, params, response: json.error, error: json.error.message || "MCP error", durationMs: Date.now() - start });
+      logged = true;
+      throw new Error(json.error.message || "MCP error");
+    }
+    mcpLog.addEntry({ timestamp: new Date(), method, params, response: json.result, error: null, durationMs: Date.now() - start });
+    logged = true;
+    return json.result;
+  } catch (err) {
+    if (!logged) {
+      const msg = err instanceof Error ? err.message : String(err);
+      mcpLog.addEntry({ timestamp: new Date(), method, params, response: null, error: msg, durationMs: Date.now() - start });
+    }
+    throw err;
+  }
 }
 
 export async function mcpToolCall(

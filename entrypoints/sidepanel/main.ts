@@ -11,6 +11,8 @@ import {
   refreshBrowserCart,
   sanitize,
 } from "../../lib/mcp-client";
+import { mcpLog, type McpLogEntry } from "../../lib/mcp-log";
+import { createJsonTree } from "../../lib/json-tree";
 
 const mcpState: McpState = createMcpState();
 
@@ -473,10 +475,47 @@ async function initMcp(origin: string, tabId: number) {
       toolsList.classList.remove("hidden");
       toolsCloud.replaceChildren();
       tools.forEach((t) => {
-        const span = document.createElement("span");
-        span.textContent = t.name;
-        span.title = (t.description || "").substring(0, 120);
-        toolsCloud.appendChild(span);
+        const pill = document.createElement("span");
+        pill.className = "tool-pill";
+        pill.textContent = t.name;
+
+        const detail = document.createElement("div");
+        detail.className = "tool-detail hidden";
+
+        const parts: string[] = [];
+        if (t.description) {
+          parts.push(`<div class="tool-detail-desc">${sanitize(t.description)}</div>`);
+        }
+        const props = t.inputSchema?.properties;
+        if (props) {
+          const required = t.inputSchema?.required || [];
+          const rows = Object.entries(props)
+            .map(([name, p]) => {
+              const req = required.includes(name) ? " <em>(required)</em>" : "";
+              const desc = p.description ? ` — ${sanitize(p.description)}` : "";
+              return `<li><code>${sanitize(name)}</code> <span class="tool-param-type">${sanitize(p.type || "")}</span>${req}${desc}</li>`;
+            })
+            .join("");
+          parts.push(`<div class="tool-detail-params"><strong>Parameters:</strong><ul>${rows}</ul></div>`);
+        }
+        detail.innerHTML = parts.join("") || "<div>No additional details.</div>";
+
+        pill.addEventListener("click", () => {
+          // Close other open details
+          toolsCloud.querySelectorAll(".tool-detail").forEach((d) => {
+            if (d !== detail) d.classList.add("hidden");
+          });
+          toolsCloud.querySelectorAll(".tool-pill").forEach((p) => {
+            if (p !== pill) p.classList.remove("tool-pill-active");
+          });
+          detail.classList.toggle("hidden");
+          pill.classList.toggle("tool-pill-active");
+        });
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "tool-pill-wrapper";
+        wrapper.append(pill, detail);
+        toolsCloud.appendChild(wrapper);
       });
     }
 
@@ -502,8 +541,90 @@ async function initMcp(origin: string, tabId: number) {
   }
 }
 
+// ─── Tabs ─────────────────────────────────────────
+function setupTabs() {
+  const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
+  const tabExtension = $("tab-extension")!;
+  const tabDebug = $("tab-debug")!;
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tabBtns.forEach((b) => b.classList.remove("tab-active"));
+      btn.classList.add("tab-active");
+      const tab = btn.dataset.tab;
+      tabExtension.classList.toggle("hidden", tab !== "extension");
+      tabDebug.classList.toggle("hidden", tab !== "debug");
+    });
+  });
+}
+
+// ─── Debug Log ────────────────────────────────────
+function setupDebugLog() {
+  const log = $("debug-log")!;
+  const clearBtn = $("debug-clear-btn")!;
+
+  clearBtn.addEventListener("click", () => {
+    mcpLog.clear();
+    log.innerHTML = '<p class="mcp-hint">Log cleared.</p>';
+  });
+
+  mcpLog.onEntry((entry: McpLogEntry) => {
+    // Remove placeholder hint
+    const hint = log.querySelector(".mcp-hint");
+    if (hint) hint.remove();
+
+    const card = document.createElement("div");
+    card.className = "debug-entry";
+
+    const ts = entry.timestamp;
+    const time = `${pad(ts.getHours())}:${pad(ts.getMinutes())}:${pad(ts.getSeconds())}.${String(ts.getMilliseconds()).padStart(3, "0")}`;
+
+    const header = document.createElement("div");
+    header.className = "debug-entry-header";
+    header.innerHTML = `<span class="debug-timestamp">${time}</span><span class="debug-method">${sanitize(entry.method)}</span><span class="debug-duration">${entry.durationMs}ms</span>`;
+    if (entry.error) {
+      header.innerHTML += `<span class="debug-error-badge">error</span>`;
+    }
+    card.appendChild(header);
+
+    // Request params
+    const reqSection = document.createElement("details");
+    reqSection.className = "debug-section";
+    const reqSummary = document.createElement("summary");
+    reqSummary.textContent = "Request";
+    reqSection.appendChild(reqSummary);
+    reqSection.appendChild(createJsonTree(entry.params));
+    card.appendChild(reqSection);
+
+    // Response
+    const resSection = document.createElement("details");
+    resSection.className = "debug-section";
+    const resSummary = document.createElement("summary");
+    resSummary.textContent = entry.error ? "Error" : "Response";
+    resSection.appendChild(resSummary);
+    if (entry.error) {
+      const errEl = document.createElement("div");
+      errEl.className = "debug-error-text";
+      errEl.textContent = entry.error;
+      resSection.appendChild(errEl);
+    }
+    if (entry.response != null) {
+      resSection.appendChild(createJsonTree(entry.response));
+    }
+    card.appendChild(resSection);
+
+    log.prepend(card);
+  });
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
 // ─── Main ─────────────────────────────────────────
 async function main() {
+  setupTabs();
+  setupDebugLog();
   showView("loading");
 
   try {
