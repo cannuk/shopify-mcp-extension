@@ -68,6 +68,37 @@ header {
   letter-spacing: -0.2px;
 }
 
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  border-top: 1px solid var(--border);
+  padding: 0 20px;
+  gap: 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+}
+
+.tab-btn.tab-active {
+  color: var(--shopify-green);
+  border-bottom-color: var(--shopify-green);
+}
+
 main {
   flex: 1;
   padding: 20px;
@@ -103,7 +134,11 @@ main {
   gap: 8px;
 }
 
-.cloud-wrap span {
+.tool-pill-wrapper {
+  display: contents;
+}
+
+.tool-pill {
   background: var(--bg-white);
   border: 1px solid var(--border);
   padding: 6px 14px;
@@ -111,7 +146,173 @@ main {
   font-size: 11px;
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
 }
+
+.tool-pill:hover {
+  border-color: var(--shopify-green);
+}
+
+.tool-pill-active {
+  background: var(--shopify-green);
+  color: #fff;
+  border-color: var(--shopify-green);
+}
+
+.tool-detail {
+  width: 100%;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tool-detail.hidden { display: none; }
+
+.tool-detail-desc {
+  margin-bottom: 8px;
+}
+
+.tool-detail-params ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.tool-detail-params li {
+  margin-bottom: 4px;
+}
+
+.tool-detail-params code {
+  font-size: 11px;
+  background: var(--bg-app);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.tool-param-type {
+  color: #888;
+  font-size: 10px;
+}
+
+/* Debug log */
+.debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.debug-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.debug-entry {
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.debug-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.debug-timestamp {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: monospace;
+}
+
+.debug-method {
+  font-weight: 600;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.debug-duration {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-app);
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+
+.debug-error-badge {
+  font-size: 10px;
+  color: #fff;
+  background: #d72c0d;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.debug-error-text {
+  color: #d72c0d;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 4px 0;
+}
+
+.debug-section {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+
+.debug-section > summary {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+/* JSON tree */
+.json-node {
+  margin-left: 14px;
+}
+
+.json-node > summary {
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 1px 0;
+}
+
+.json-row {
+  margin-left: 14px;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.json-key {
+  color: #5E8E3E;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.json-index {
+  color: var(--text-muted);
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.json-string { color: #b44437; font-family: monospace; font-size: 11px; word-break: break-word; }
+.json-number { color: #1565c0; font-family: monospace; font-size: 11px; }
+.json-boolean { color: #7b1fa2; font-family: monospace; font-size: 11px; }
+.json-null { color: var(--text-muted); font-family: monospace; font-size: 11px; font-style: italic; }
+.json-bracket { color: var(--text-muted); font-family: monospace; font-size: 11px; }
+.json-count { color: var(--text-muted); font-family: monospace; font-size: 10px; }
 
 .spinner {
   width: 16px;
