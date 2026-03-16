@@ -1,6 +1,7 @@
 export interface McpLogEntry {
   id: number;
   timestamp: Date;
+  endpoint: string;
   method: string;
   params: Record<string, unknown>;
   response: unknown | null;

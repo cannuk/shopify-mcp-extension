@@ -4,6 +4,7 @@ import { mcpLog } from "../mcp-log";
 function makeEntry(overrides: Partial<Omit<Parameters<typeof mcpLog.addEntry>[0], "timestamp">> = {}) {
   return {
     timestamp: new Date(),
+    endpoint: "https://example.com/api/mcp",
     method: "test/method",
     params: {},
     response: null,
@@ -71,5 +72,12 @@ describe("mcpLog", () => {
     expect(entry.response).toEqual({ products: [] });
     expect(entry.durationMs).toBe(42);
     expect(entry.id).toBeGreaterThan(0);
+  });
+
+  it("preserves endpoint field", () => {
+    const entry = mcpLog.addEntry(
+      makeEntry({ endpoint: "https://shop.com/api/ucp/mcp" })
+    );
+    expect(entry.endpoint).toBe("https://shop.com/api/ucp/mcp");
   });
 });

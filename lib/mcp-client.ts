@@ -114,17 +114,17 @@ export async function mcpCall(
     });
     const json = await res.json();
     if (json.error) {
-      mcpLog.addEntry({ timestamp: new Date(), method, params, response: json.error, error: json.error.message || "MCP error", durationMs: Date.now() - start });
+      mcpLog.addEntry({ timestamp: new Date(), endpoint: state.endpoint, method, params, response: json.error, error: json.error.message || "MCP error", durationMs: Date.now() - start });
       logged = true;
       throw new Error(json.error.message || "MCP error");
     }
-    mcpLog.addEntry({ timestamp: new Date(), method, params, response: json.result, error: null, durationMs: Date.now() - start });
+    mcpLog.addEntry({ timestamp: new Date(), endpoint: state.endpoint, method, params, response: json.result, error: null, durationMs: Date.now() - start });
     logged = true;
     return json.result;
   } catch (err) {
     if (!logged) {
       const msg = err instanceof Error ? err.message : String(err);
-      mcpLog.addEntry({ timestamp: new Date(), method, params, response: null, error: msg, durationMs: Date.now() - start });
+      mcpLog.addEntry({ timestamp: new Date(), endpoint: state.endpoint, method, params, response: null, error: msg, durationMs: Date.now() - start });
     }
     throw err;
   }
@@ -163,7 +163,7 @@ export async function mcpInitialize(
   return mcpCall(state, "initialize", {
     protocolVersion: "2024-11-05",
     capabilities: {},
-    clientInfo: { name: "shopify-mcp-extension", version: "1.0" },
+    clientInfo: { name: "shopify-mcp-explorer", version: "1.0" },
   }) as Promise<McpInitResult>;
 }
 

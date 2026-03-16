@@ -99,6 +99,46 @@ describe("mcpCall", () => {
     expect(mcpLog.entries[0].durationMs).toBeGreaterThanOrEqual(0);
   });
 
+  it("logs the endpoint in each entry", async () => {
+    mockFetch.mockReturnValue(jsonResponse({ result: {} }));
+    await mcpCall(state, "test");
+
+    expect(mcpLog.entries[0].endpoint).toBe("https://example.com/api/mcp");
+  });
+
+  it("logs the endpoint on error responses", async () => {
+    mockFetch.mockReturnValue(
+      jsonResponse({ error: { message: "fail" } })
+    );
+    await expect(mcpCall(state, "fail")).rejects.toThrow();
+
+    expect(mcpLog.entries[0].endpoint).toBe("https://example.com/api/mcp");
+  });
+
+  it("logs the endpoint on network errors", async () => {
+    mockFetch.mockRejectedValue(new Error("Network failure"));
+    await expect(mcpCall(state, "net-fail")).rejects.toThrow();
+
+    expect(mcpLog.entries[0].endpoint).toBe("https://example.com/api/mcp");
+  });
+
+  it("logs different endpoints for different states", async () => {
+    mockFetch.mockReturnValue(jsonResponse({ result: {} }));
+
+    await mcpCall(state, "storefront-call");
+
+    const ucpState = createMcpState();
+    ucpState.endpoint = "https://example.com/api/ucp/mcp";
+    await mcpCall(ucpState, "ucp-call");
+
+    expect(mcpLog.entries).toHaveLength(2);
+    // newest first
+    expect(mcpLog.entries[0].endpoint).toBe("https://example.com/api/ucp/mcp");
+    expect(mcpLog.entries[0].method).toBe("ucp-call");
+    expect(mcpLog.entries[1].endpoint).toBe("https://example.com/api/mcp");
+    expect(mcpLog.entries[1].method).toBe("storefront-call");
+  });
+
   it("logs error calls", async () => {
     mockFetch.mockReturnValue(
       jsonResponse({ error: { message: "bad request" } })
