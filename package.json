@@ -6,10 +6,16 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
-    "zip": "wxt zip"
+    "zip": "wxt zip",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "typescript": "^5.9.3",
     "wxt": "^0.20.18"
+  },
+  "devDependencies": {
+    "happy-dom": "^20.8.4",
+    "vitest": "^3.2.4"
   }
 }
